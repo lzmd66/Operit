@@ -27,6 +27,7 @@ on:
     branches: [harmony-seed]
     paths:
       - .github/workflows/android-build.yml
+      - .github/workflows/seed-build.yml
       - .gitmodules
       - .npmrc
       - app/**
