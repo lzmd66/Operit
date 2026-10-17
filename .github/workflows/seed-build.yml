@@ -24,7 +24,7 @@ on:
         default: false
         type: boolean
   push:
-    branches: [main]
+    branches: [harmony-seed]
     paths:
       - .github/workflows/android-build.yml
       - .gitmodules
