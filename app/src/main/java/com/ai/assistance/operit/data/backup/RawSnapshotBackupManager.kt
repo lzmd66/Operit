@@ -109,7 +109,7 @@ object RawSnapshotBackupManager {
     ): File = withContext(Dispatchers.IO) {
         TokenUsageRepository.withDatabaseAccess {
             AppLogger.i(TAG, "export start (includeTerminalData=${options.includeTerminalData})")
-            withContext(Dispatchers.Main) { onProgress?.invoke(ExportProgressInfo(ExportProgress.PREPARING)) }
+            withContext(Dispatchers.Main.immediate) { onProgress?.invoke(ExportProgressInfo(ExportProgress.PREPARING)) }
             val exportDir = OperitBackupDirs.rawSnapshotDir()
             val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
             val outFile = File(exportDir, "$ZIP_PREFIX$timestamp.zip")
@@ -160,7 +160,7 @@ object RawSnapshotBackupManager {
                 } else {
                     alwaysExcluded + terminalTopLevelDirNames
                 }
-                withContext(Dispatchers.Main) {
+                withContext(Dispatchers.Main.immediate) {
                     onProgress?.invoke(ExportProgressInfo(stage = ExportProgress.SCANNING_FILES, scannedFiles = 0))
                 }
                 val filesTotalCount = totalFilesForZip(
@@ -177,12 +177,12 @@ object RawSnapshotBackupManager {
                         }
                     }
                 )
-                withContext(Dispatchers.Main) {
+                withContext(Dispatchers.Main.immediate) {
                     onProgress?.invoke(
                         ExportProgressInfo(stage = ExportProgress.SCANNING_FILES, scannedFiles = filesTotalCount)
                     )
                 }
-                withContext(Dispatchers.Main) { onProgress?.invoke(ExportProgressInfo(ExportProgress.ZIPPING_FILES, 0)) }
+                withContext(Dispatchers.Main.immediate) { onProgress?.invoke(ExportProgressInfo(ExportProgress.ZIPPING_FILES, 0)) }
                 val filesMs = measureTimeMillis {
                     addDirToZip(
                         zos = zos,
@@ -199,7 +199,7 @@ object RawSnapshotBackupManager {
                         }
                     )
                 }
-                withContext(Dispatchers.Main) { onProgress?.invoke(ExportProgressInfo(ExportProgress.ZIPPING_FILES, 100)) }
+                withContext(Dispatchers.Main.immediate) { onProgress?.invoke(ExportProgressInfo(ExportProgress.ZIPPING_FILES, 100)) }
                 AppLogger.i(TAG, "export add files done in ${filesMs}ms (excludedTopLevel=${excludedNames.size})")
 
                 val externalFilesTotalCount = totalFilesForZip(
@@ -207,7 +207,7 @@ object RawSnapshotBackupManager {
                     entryPrefix = ENTRY_EXTERNAL_FILES,
                     excludedTopLevelDirNames = emptySet()
                 )
-                withContext(Dispatchers.Main) {
+                withContext(Dispatchers.Main.immediate) {
                     onProgress?.invoke(ExportProgressInfo(ExportProgress.ZIPPING_EXTERNAL_FILES, 0))
                 }
                 val externalFilesMs = measureTimeMillis {
@@ -227,25 +227,25 @@ object RawSnapshotBackupManager {
                         }
                     )
                 }
-                withContext(Dispatchers.Main) {
+                withContext(Dispatchers.Main.immediate) {
                     onProgress?.invoke(ExportProgressInfo(ExportProgress.ZIPPING_EXTERNAL_FILES, 100))
                 }
                 AppLogger.i(TAG, "export add external_files done in ${externalFilesMs}ms")
 
-                withContext(Dispatchers.Main) { onProgress?.invoke(ExportProgressInfo(ExportProgress.ZIPPING_SHARED_PREFS)) }
+                withContext(Dispatchers.Main.immediate) { onProgress?.invoke(ExportProgressInfo(ExportProgress.ZIPPING_SHARED_PREFS)) }
                 val sharedPrefsMs = measureTimeMillis { addDirToZip(zos, sharedPrefsDir, ENTRY_SHARED_PREFS) }
                 AppLogger.i(TAG, "export add shared_prefs done in ${sharedPrefsMs}ms")
 
-                withContext(Dispatchers.Main) { onProgress?.invoke(ExportProgressInfo(ExportProgress.ZIPPING_DATASTORE)) }
+                withContext(Dispatchers.Main.immediate) { onProgress?.invoke(ExportProgressInfo(ExportProgress.ZIPPING_DATASTORE)) }
                 val datastoreMs = measureTimeMillis { addDirToZip(zos, datastoreDir, ENTRY_DATASTORE) }
                 AppLogger.i(TAG, "export add datastore done in ${datastoreMs}ms")
 
-                withContext(Dispatchers.Main) { onProgress?.invoke(ExportProgressInfo(ExportProgress.ZIPPING_DATABASES)) }
+                withContext(Dispatchers.Main.immediate) { onProgress?.invoke(ExportProgressInfo(ExportProgress.ZIPPING_DATABASES)) }
                 val databasesMs = measureTimeMillis { addDirToZip(zos, databasesDir, ENTRY_DATABASES) }
                 AppLogger.i(TAG, "export add databases done in ${databasesMs}ms")
             }
 
-            withContext(Dispatchers.Main) { onProgress?.invoke(ExportProgressInfo(ExportProgress.FINALIZING)) }
+            withContext(Dispatchers.Main.immediate) { onProgress?.invoke(ExportProgressInfo(ExportProgress.FINALIZING)) }
             if (outFile.exists()) {
                 outFile.delete()
             }
@@ -274,8 +274,8 @@ object RawSnapshotBackupManager {
 
             try {
                 AppLogger.i(TAG, "restore start uri=$uri")
-                withContext(Dispatchers.Main) { onProgress?.invoke(RestoreProgress.PREPARING) }
-                withContext(Dispatchers.Main) { onProgress?.invoke(RestoreProgress.READING_ZIP) }
+                withContext(Dispatchers.Main.immediate) { onProgress?.invoke(RestoreProgress.PREPARING) }
+                withContext(Dispatchers.Main.immediate) { onProgress?.invoke(RestoreProgress.READING_ZIP) }
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     FileOutputStream(cacheZip).use { output ->
                         input.copyTo(output)
@@ -289,7 +289,7 @@ object RawSnapshotBackupManager {
 
                 AppLogger.i(TAG, "restore closed databases (room + objectbox)")
 
-                withContext(Dispatchers.Main) { onProgress?.invoke(RestoreProgress.EXTRACTING) }
+                withContext(Dispatchers.Main.immediate) { onProgress?.invoke(RestoreProgress.EXTRACTING) }
                 val manifest = extractZipToWorkDir(cacheZip, workDir)
 
                 val payloadDir = File(workDir, "payload")
@@ -311,23 +311,23 @@ object RawSnapshotBackupManager {
 
                 AppLogger.i(TAG, "restore replace dirs (preserveTerminalTopLevel=${preservedNames.isNotEmpty()})")
 
-                withContext(Dispatchers.Main) { onProgress?.invoke(RestoreProgress.REPLACING_FILES) }
+                withContext(Dispatchers.Main.immediate) { onProgress?.invoke(RestoreProgress.REPLACING_FILES) }
                 replaceDirContents(File(payloadDir, "files"), context.filesDir, preservedTopLevelDirNames = preservedNames)
                 if (externalFilesPayloadDir.exists()) {
                     val externalFilesDir = requireNotNull(context.getExternalFilesDir(null)) {
                         "External files dir is unavailable"
                     }
-                    withContext(Dispatchers.Main) { onProgress?.invoke(RestoreProgress.REPLACING_EXTERNAL_FILES) }
+                    withContext(Dispatchers.Main.immediate) { onProgress?.invoke(RestoreProgress.REPLACING_EXTERNAL_FILES) }
                     replaceDirContents(externalFilesPayloadDir, externalFilesDir)
                 }
-                withContext(Dispatchers.Main) { onProgress?.invoke(RestoreProgress.REPLACING_SHARED_PREFS) }
+                withContext(Dispatchers.Main.immediate) { onProgress?.invoke(RestoreProgress.REPLACING_SHARED_PREFS) }
                 replaceDirContents(File(payloadDir, "shared_prefs"), File(context.dataDir, "shared_prefs"))
-                withContext(Dispatchers.Main) { onProgress?.invoke(RestoreProgress.REPLACING_DATASTORE) }
+                withContext(Dispatchers.Main.immediate) { onProgress?.invoke(RestoreProgress.REPLACING_DATASTORE) }
                 replaceDirContents(File(payloadDir, "datastore"), File(context.dataDir, "datastore"))
-                withContext(Dispatchers.Main) { onProgress?.invoke(RestoreProgress.REPLACING_DATABASES) }
+                withContext(Dispatchers.Main.immediate) { onProgress?.invoke(RestoreProgress.REPLACING_DATABASES) }
                 replaceDirContents(File(payloadDir, "databases"), File(context.dataDir, "databases"))
 
-                withContext(Dispatchers.Main) { onProgress?.invoke(RestoreProgress.FINALIZING) }
+                withContext(Dispatchers.Main.immediate) { onProgress?.invoke(RestoreProgress.FINALIZING) }
                 AppLogger.i(TAG, "restore done: ${manifest.packageName}")
             } catch (e: Exception) {
                 AppLogger.e(TAG, "restore failed", e)

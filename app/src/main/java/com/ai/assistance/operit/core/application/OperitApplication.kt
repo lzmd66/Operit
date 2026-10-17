@@ -32,6 +32,7 @@ import com.ai.assistance.operit.core.tools.AIToolHandler
 import com.ai.assistance.operit.core.tools.system.AndroidShellExecutor
 import com.ai.assistance.operit.core.tools.system.Terminal
 import com.ai.assistance.operit.core.workflow.WorkflowSchedulerInitializer
+import com.ai.assistance.operit.data.backup.SeedRestoreInstaller
 import com.ai.assistance.operit.data.backup.RoomDatabaseBackupPreferences
 import com.ai.assistance.operit.data.backup.RoomDatabaseBackupScheduler
 import com.ai.assistance.operit.data.db.AppDatabase
@@ -120,6 +121,10 @@ class OperitApplication : Application(), ImageLoaderFactory, WorkConfiguration.P
         val startTime = System.currentTimeMillis()
         appStartupTimeMs = startTime
         instance = this
+
+        // fork 定制：首启预置数据恢复（旧包原始快照 → 新包），必须在读取任何 preferences/数据库之前完成。
+        // 恢复会把 files / external_files / shared_prefs / datastore / databases 整目录替换。
+        SeedRestoreInstaller.installIfNeeded(this)
 
         // Workers and receivers can cold-start the process without creating an Activity.
         // Initialize process-wide preference dependencies before those entry points can run.
